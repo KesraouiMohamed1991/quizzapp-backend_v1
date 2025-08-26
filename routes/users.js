@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
 // List recent users (paginate in real apps)
 router.get("/", async (req, res) => {
   const { limit = 100 } = req.query
-  const users = await User.find({}, { name: 1, email: 1, createdAt: 1 })
+  const users = await User.find()
     .sort({ createdAt: -1 })
     .limit(Math.min(Number(limit) || 100, 500))
   res.json({ ok: true, users })
