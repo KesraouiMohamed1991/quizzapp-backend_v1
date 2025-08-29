@@ -1,15 +1,23 @@
 // models/User.js
-const { Schema, model, models } = require("mongoose")
+const mongoose = require("mongoose");
 
-const UserSchema = new Schema(
-    {
-        name: { type: String, required: true, trim: true, maxlength: 120 },
-        email: { type: String, required: true, trim: true, lowercase: true, unique: true, maxlength: 254 },
-    },
-    { timestamps: true }
-)
+const userSchema = new mongoose.Schema({
+    name: { type: String, default: "" },
+    email: { type: String, required: true, unique: true },
+    image: { type: String, default: "" },
+    providers: [
+        {
+            provider: { type: String, required: true }, // "google", "github", etc.
+            providerId: { type: String, required: true }, // ID unique chez le provider
+            _id: false, // Désactive l'ID auto-généré pour les sous-documents
+        }
+    ],
+    lastLogin: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now },
+});
 
-// Helpful indexes
-UserSchema.index({ email: 1 }, { unique: true })
+// Index pour optimiser les recherches
+userSchema.index({ email: 1 });
+userSchema.index({ "providers.provider": 1, "providers.providerId": 1 }, { unique: true });
 
-module.exports = models.User || model("User", UserSchema)
+module.exports = mongoose.model("User", userSchema);

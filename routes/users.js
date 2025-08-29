@@ -13,32 +13,77 @@ router.get('/', function (req, res, next) {
   res.send('respond with a resource');
 });
 
+// router.post("/", async (req, res) => {
+//   try {
+//     const { name, email } = UserInput.parse(req.body)
+
+//     // Upsert: create if new, update name if email exists
+//     const user = await User.findOneAndUpdate(
+//       { email },
+//       { $set: { name } },
+//       { new: true, upsert: true, setDefaultsOnInsert: true }
+//     )
+
+//     return res.status(201).json({ ok: true, user })
+//   } catch (err) {
+//     if (err.name === "ZodError") {
+//       return res.status(400).json({ ok: false, error: "Invalid input", details: err.issues })
+//     }
+//     if (err.code === 11000) {
+//       // unique index conflict (rare with upsert but possible under race)
+//       return res.status(409).json({ ok: false, error: "Email already exists" })
+//     }
+//     console.error(err)
+//     return res.status(500).json({ ok: false, error: "Server error" })
+//   }
+// })
+
+// routes/users.ts (ou ton fichier de route)
+
 router.post("/", async (req, res) => {
   try {
-    const { name, email } = UserInput.parse(req.body)
+    // Valide les données avec Zod
+    const { name, email, image, provider, providerAccountId } = UserInput.parse(req.body);
 
-    // Upsert: create if new, update name if email exists
+    // Upsert: crée ou met à jour l'utilisateur
     const user = await User.findOneAndUpdate(
-      { email },
-      { $set: { name } },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    )
+      { email }, // Cherche par email
+      {
+        $set: {
+          name: name || "", // Évite undefined
+          image: image || "",
+          lastLogin: new Date(),
+        },
+        $addToSet: { // Ajoute le provider si non existant
+          providers: { provider, providerId: providerAccountId }
+        }
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      }
+    );
 
-    return res.status(201).json({ ok: true, user })
+    return res.status(201).json({ ok: true, user });
   } catch (err) {
     if (err.name === "ZodError") {
-      return res.status(400).json({ ok: false, error: "Invalid input", details: err.issues })
+      return res.status(400).json({ ok: false, error: "Invalid input", details: err.issues });
     }
     if (err.code === 11000) {
-      // unique index conflict (rare with upsert but possible under race)
-      return res.status(409).json({ ok: false, error: "Email already exists" })
+      // Conflit d'index unique (rare avec upsert, mais possible en cas de race condition)
+      return res.status(409).json({ ok: false, error: "Email already exists" });
     }
-    console.error(err)
-    return res.status(500).json({ ok: false, error: "Server error" })
+    console.error("Erreur dans POST /users:", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
   }
-})
+});
 
 // List recent users (paginate in real apps)
+
+
+
+
 router.get("/", async (req, res) => {
   const { limit = 100 } = req.query
   const users = await User.find()
